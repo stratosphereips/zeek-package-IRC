@@ -1,0 +1,4 @@
+# zeek output logs
+*.log
+*.pcap
+
