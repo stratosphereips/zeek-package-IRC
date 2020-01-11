@@ -25,7 +25,7 @@ type IRC_Session: record {
     end_time: time &log;
     duration: double &log;
     msg_count: count &log;
-    pkt_size_total: int &log;
+    size_total: int &log;
     periodicity: double &optional &log;
     spec_chars_username_mean: double &log;
     spec_chars_msg_mean: double &log;
@@ -57,17 +57,22 @@ type double_vec: vector of double;
 
 global irc_logs: vector of IRC_Event = vector();
 
-redef LogAscii::use_json = T;
+global VERBOSE: bool = F;
+
+# uncomment to use json as output
+# redef LogAscii::use_json = T;
 
 event zeek_init()
 {
-    print "zeek init";
+    if (VERBOSE) {
+        print "zeek init";
+    }
     Log::create_stream(IRC_Feature_Extractor::LOG, [$columns=IRC_Session, $path="irc_features"]);
 }
 
 event IRC::irc_log(rec: IRC::Info) {
     if (rec$command != "USER") return;
-    local ev: IRC_Event = IRC_Event($ts=rec$ts, $src=rec$user, $src_ip=rec$id$orig_h, $src_port=rec$id$orig_p, $dst="", $dst_ip=rec$id$resp_h, $dst_port=rec$id$resp_p, $msg=rec$addl);
+    local ev: IRC_Event = IRC_Event($ts=rec$ts, $src=rec$nick, $src_ip=rec$id$orig_h, $src_port=rec$id$orig_p, $dst="", $dst_ip=rec$id$resp_h, $dst_port=rec$id$resp_p, $msg=rec$addl);
     irc_logs += ev;
 }
 
@@ -100,7 +105,12 @@ global fft_preprocess_seq: function(x: vector of Complex): vector of Complex;
 event zeek_done()
 {
     local sessions_vec: vector of IRC_Session = extract_sessions();
-    print "zeek done.";
+    
+    if (VERBOSE) {
+        print "zeek done.";
+    }
+
+
     for (i in sessions_vec ) {
         Log::write( IRC_Feature_Extractor::LOG, sessions_vec[i]);
     }
@@ -121,45 +131,61 @@ local extract_features: function(out:file);
 ### FUNCTION IMPLEMENTATION
 extract_sessions = function(): vector of IRC_Session
 {
-    print "extract sessions...";
+    if (VERBOSE) {
+        print "extract sessions...";
+    }
     local events: table[IRC_EventKey] of event_vec = organize_events();
     local session_vec: vector of IRC_Session;
     local i_count :count  = 0;
+    local size_total: int;
     for (i in events) {
-        print "######################################";
-        print "#session: ",i_count+1,"/",|events|;
         local ev: IRC_Event = events[i][0];
         local src: string = ev$src;
-        print "src: ", src;
         local src_ip: addr = ev$src_ip;
-        print "src IP: ", src_ip;
         local start_time: time = ev$ts;
-        print "start time: ", start_time;
         local last_msg_idx: count = |events[i]| - 1;
         local end_time: time = events[i][last_msg_idx]$ts;
-        print "end time: ", start_time;
         local dst: string = ev$dst;
-        print "dst: ", dst;
         local dst_ip: addr = ev$dst_ip;
-        print "dst IP: ", dst_ip;
         local dst_port: port = ev$dst_port;
-
-        local pkt_size_total: int = -1; # TODO
         local msg_ts_vec: vector of time;
         local msg_count: count = |events[i]|;
-        print "msg_count: ", msg_count;
         local word_occurency_table: table[string] of count;
+        if (VERBOSE) {
+            print "######################################";
+            print "#session: ",i_count+1,"/",|events|;
+            print "src: ", src;
+            print "src IP: ", src_ip;
+            print "start time: ", start_time;
+            print "end time: ", start_time;
+            print "dst: ", dst;
+            print "dst IP: ", dst_ip;
+            print "msg_count: ", msg_count;
+        }
+        size_total = 0;
+        local rgx_str_tmp: string = src;
+        local user_rgx_str: string = "";
+        local user_rgx: PatternMatchResult;
+        while (T) {
+            user_rgx = match_pattern(rgx_str_tmp, /([^a-zA-Z])*/);
+            if (!user_rgx$matched) {
+                break;
+            }
+            user_rgx_str = user_rgx_str + user_rgx$str;
+            rgx_str_tmp = rgx_str_tmp[user_rgx$off+|user_rgx$str|-1:];
+        }
 
-        local _spec_chars_username_rgx: PatternMatchResult = match_pattern(src, /[^A-Za-z]/);
-        local spec_chars_username_mean: double = |_spec_chars_username_rgx$str| / |src|;
+        local spec_chars_username_mean: double = |user_rgx_str| / (|src|+0.00001);
         local msg_special_chars: vector of double;
         local src_ports: set[port];
+
         for (j in events[i])
         {
             local ev2: IRC_Event = events[i][j];
             msg_ts_vec += ev2$ts;
             local msg: string = ev2$msg;
             local split_msg: string_vec = split_string(msg,/ /);
+            size_total += |ev2$msg|;
             
             # compute word occurency
             for (k in split_msg) {
@@ -172,8 +198,19 @@ extract_sessions = function(): vector of IRC_Session
             }
 
             # compute msg special chars
-            local _msg_spec_rgx: PatternMatchResult = match_pattern(msg, /[^A-Za-z]/);
-            local msg_spec: double = |_msg_spec_rgx$str| / |msg|;
+            local msg_rgx_str: string = "";
+            local msg_rgx: PatternMatchResult;
+            rgx_str_tmp = msg;
+            while (T) {
+                msg_rgx = match_pattern(rgx_str_tmp, /[^A-Za-z ]/);
+                if (!msg_rgx$matched) {
+                    break;
+                }
+                msg_rgx_str = msg_rgx_str + msg_rgx$str;
+                rgx_str_tmp = rgx_str_tmp[msg_rgx$off+|msg_rgx$str|-1:];
+            }
+
+            local msg_spec: double = |msg_rgx_str| / (|msg|+0.00001);
             msg_special_chars += msg_spec;
             add src_ports[ev2$src_port];   
         }
@@ -190,24 +227,38 @@ extract_sessions = function(): vector of IRC_Session
             p += c;
             word_count_sum += c;
         }
-        p = p / word_count_sum;
+
+        for (el in p) {
+            p[el] = p[el] / word_count_sum;
+        }
+        # p = p / word_count_sum;
 
         # compute msg special chars mean
         local spec_chars_msg_mean: double = mean_f(msg_special_chars);
-        print "special characters message mean: ", spec_chars_msg_mean;
-        local msg_word_entropy: double = -sum_f(p * (ln_f(p)/ln(2)));
-        print "message word entropy: ", msg_word_entropy;
+        # local msg_word_entropy: double = -sum_f(p * (ln_f(p)/ln(2)));
+        local msg_word_entropy: double = 0;
+
+        for (el in p) {
+            msg_word_entropy -= p[el] * (ln(p[el]/ln(2)));
+        }
         local duration: double = interval_to_double(end_time - start_time);
-        print "duration: ", duration;
         local periodicity: double = compute_session_periodicity(msg_ts_vec);
-        print "periodicity: ", periodicity;
+
+        if (VERBOSE) {
+            print "special characters username mean: ", spec_chars_username_mean;
+            print "special characters message mean: ", spec_chars_msg_mean;
+            print "message word entropy: ", msg_word_entropy;
+            print "duration: ", duration;
+            print "periodicity: ", periodicity;
+        }
+
         local session: IRC_Session = IRC_Session($src = src, $src_ip = src_ip, $src_ports_count = |src_ports|,$dst = dst,$dst_ip = dst_ip,
             $dst_port = dst_port, 
             $start_time = start_time, 
             $end_time = end_time, 
             $duration = duration, 
             $msg_count = msg_count, 
-            $pkt_size_total = pkt_size_total, # TODO
+            $size_total = size_total, # TODO
             $spec_chars_username_mean = spec_chars_username_mean,
             $spec_chars_msg_mean = spec_chars_msg_mean,
             $msg_word_entropy = msg_word_entropy,
@@ -225,8 +276,11 @@ extract_sessions = function(): vector of IRC_Session
 
 organize_events = function(): table[IRC_EventKey] of event_vec
 {
-    print "organize events...";
-    print "|events|: ", |irc_logs|;
+    if (VERBOSE) {
+        print "organize events...";
+        print "|events|: ", |irc_logs|;
+    }
+
     local key_set: table[IRC_EventKey] of event_vec;
     for (i in irc_logs) {
         local ev: IRC_Event = irc_logs[i];
@@ -249,7 +303,9 @@ organize_events = function(): table[IRC_EventKey] of event_vec
 
 compute_session_periodicity = function(ts_vec: vector of time): double
 {
-    print "compute_session_periodicity...";
+    if (VERBOSE) {
+        print "compute_session_periodicity...";
+    }
 
     if (|ts_vec| < 3) {
         return -1;
@@ -269,7 +325,9 @@ compute_session_periodicity = function(ts_vec: vector of time): double
 
     if (|td_vec_c| > 0) {
         local td_vec_c2: vector of Complex = fft_preprocess_seq(td_vec_c);
-        print "fft...";
+        if (VERBOSE) {
+            print "fft...";
+        }
         local per_vec: vector of Complex = fft(td_vec_c2);
     }
 
@@ -289,7 +347,10 @@ compute_session_periodicity = function(ts_vec: vector of time): double
     local x_start: count;
     local x_end: count;
     
-    print "dividing td into boxes....";
+    if (VERBOSE) {
+        print "dividing td into boxes....";
+    }
+
     while (x*t+t <= rng_size) { 
         local x_vec: vector of double = vector();
         x_start = x * t;
