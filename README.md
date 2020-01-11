@@ -33,16 +33,13 @@ Since the source port is neglected in unifying communication into sessions, the 
 To compute message periodicity, we firstly compute time differences between every message. On this computed sequence of numbers, we apply a fast Fourier transform (FFT). Fast Fourier transform is an effective algorithm for computing discrete Fourier transform, which we are using to express time sequence as a sum of periodic components and for recovering signal from those components. The output of FFT is a sequence of numbers with the same length as the input. The higher the number on a given position of the output is, the bigger the amplitude on the given position is, and thus it has a more significant influence on the periodicity of the data. The position of the largest element in the FFT's output represents the length of the period which occurrence is the most probable from all other periods.
 
 To compute the quality of the period, we split the data by the length of a period. Then we compute the normalised mean squared error (NMSE) that returns us the resulting number in the interval between 0 and 1 where 1 represents the perfectly periodic messages, and 0 represents not periodic messages at all.
-\[\begin{aligned}
-N M S E(x, y)=M S E(x, y) / M S E(x, 0)=\frac{\|x-y\|_{2}^{2}}{\|x\|_{2}^{2}}\end{aligned}\]
-<span> </span>
+
+![](figs/formula_per.gif)
 
 ### Message Word Entropy
 To take into account whether the user is sending the same message multiple times in a row, or whether the message contains limited number of words, we compute word entropy across all messages in IRC connection. For computation of word entropy we are using formula below,
 
-\[\begin{aligned}
-H(X)=-\sum_{i=1}^{n} p_{i} \log \left(p_{i}\right)\end{aligned}\] <span>
-</span>
+![](figs/formula_entropy.gif)
 
 where n represents number of words and p_i represents the probability that word $i$ is used among all other words.
 ### Username Special Characters Mean
