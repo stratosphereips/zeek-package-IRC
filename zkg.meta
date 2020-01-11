@@ -1,1 +1,3 @@
 [package]
+tags = zeek plugin, zeekctl plugin, irc, features extraction
+script_dir = scripts
