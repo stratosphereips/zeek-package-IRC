@@ -3,8 +3,9 @@ Zeek Package that extracts features from IRC communication
 
 ## Installation
 To install the package do the following in the package directory:
-
-    $ zkg install https://github.com/stratosphereips/IRC-Zeek-package
+    $ git clone git@github.com:stratosphereips/IRC-Zeek-package.git
+    $ cd IRC-Zeek-package
+    $ zkg install .
 
 ## Run
 To extract the IRC features on selected pcap file that contains IRC, the only thing that you need to do is:
