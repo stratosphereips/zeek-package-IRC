@@ -9,7 +9,7 @@ $ cd IRC-Zeek-package
 $ zkg install .
 ```
 ## Run
-To extract the IRC features on selected pcap file that contains IRC, the only thing that you need to do is:
+To extract the IRC features on selected pcap file that contains IRC, the only thing that you need to do is to run following command in terminal:
 ```bash
 $ zeek -r file.pcap irc_feature_extractor
 ```
