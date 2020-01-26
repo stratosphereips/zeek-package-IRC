@@ -1,22 +1,41 @@
 # IRC-Zeek-package
-Zeek Package that extracts features from IRC communication
+Zeek Package that extracts features of IRC communication that is automatically recognized from pcap file. 
 
 ## Installation
 To install the package do the following in the package directory:
-
-    $ git clone git@github.com:stratosphereips/IRC-Zeek-package.git
-    $ cd IRC-Zeek-package
-    $ zkg install .
-
+```bash
+$ git clone git@github.com:stratosphereips/IRC-Zeek-package.git
+$ cd IRC-Zeek-package
+$ zkg install .
+```
 ## Run
 To extract the IRC features on selected pcap file that contains IRC, the only thing that you need to do is:
-
-    zeek -r file.pcap irc_feature_extractor
-
+```bash
+$ zeek -r file.pcap irc_feature_extractor
+```
 output will be redirected `irc_features.log` file in zeek log format.
 
+### Parsing log output in Python
+
+```python
+import zat
+from zat.log_to_dataframe import LogToDataFrame
+from zat.bro_log_reader import BroLogReader
+
+
+log_filename = 'irc_features.log'
+
+logs_arr = []
+reader = BroLogReader(log_filename)
+
+for log in reader.readrows():
+    # log is in dictionary format
+    print(log)
+    logs_arr.append(log) 
+```
+
 ## Description
-To be able to use our data, we separated the communication into the connections between source IP, destination IP and destination port (hereinafter IRC connection)(see Figure below). The source port is neglected because we wanted to to merge communication that was splitted to more TCP connections. When the TCP connection is made, the source port is randomly generated from the unregistered port range and thus we needed to neglect the source port to match the IRC connection with the same source IP, destination IP and destination port. 
+To be able to use IRC data, we separated the IRC communication into the connections between source IP, destination IP and destination port (hereinafter IRC connection)(see Figure below). The source port is neglected because we wanted to to merge communication that was splitted to more TCP connections. When the TCP connection is made, the source port is randomly generated from the unregistered port range and thus we needed to neglect the source port to match the IRC connection with the same source IP, destination IP and destination port. 
 IRC connection consists of informations that are needed.
 
 ![IRC Connection Scheme](figs/irc-connection.png)
