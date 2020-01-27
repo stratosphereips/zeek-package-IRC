@@ -40,7 +40,6 @@ type IRC_EventKey: record {
     dst_port: port;
 };
 
-# LOGGING ENV
 export {
     redef enum Log::ID += { LOG };
     
@@ -117,18 +116,13 @@ event zeek_done()
 }
 
 local irc_sessions: vector of IRC_Session;
-### FUNCTION HEADERS 
-# COMPLEX
 local add_cd: function(a: Complex, b: double): Complex;
 local div_cc: function(a:Complex, b:Complex): Complex;
 local div_cd: function(a:Complex, b:double): Complex;
-# UTILS
-# MAIN
 local get_key: function(ev: IRC_Event): IRC_EventKey;
 local extract_features: function(out:file);
 
 
-### FUNCTION IMPLEMENTATION
 extract_sessions = function(): vector of IRC_Session
 {
     if (VERBOSE) {
@@ -231,13 +225,10 @@ extract_sessions = function(): vector of IRC_Session
         for (el in p) {
             p[el] = p[el] / word_count_sum;
         }
-        # p = p / word_count_sum;
 
-        # compute msg special chars mean
         local spec_chars_msg_mean: double = mean_f(msg_special_chars);
-        # local msg_word_entropy: double = -sum_f(p * (ln_f(p)/ln(2)));
+        
         local msg_word_entropy: double = 0;
-
         for (el in p) {
             msg_word_entropy -= p[el] * (ln(p[el]/ln(2)));
         }
@@ -258,7 +249,7 @@ extract_sessions = function(): vector of IRC_Session
             $end_time = end_time, 
             $duration = duration, 
             $msg_count = msg_count, 
-            $size_total = size_total, # TODO
+            $size_total = size_total,
             $spec_chars_username_mean = spec_chars_username_mean,
             $spec_chars_msg_mean = spec_chars_msg_mean,
             $msg_word_entropy = msg_word_entropy,
@@ -284,11 +275,12 @@ organize_events = function(): table[IRC_EventKey] of event_vec
     local key_set: table[IRC_EventKey] of event_vec;
     for (i in irc_logs) {
         local ev: IRC_Event = irc_logs[i];
-        # create a session and for loop the rest of the logs and add which is matching by the key  and create 'array of arrays'
+        
         local src_ip: addr = ev$src_ip;
         local dst_ip: addr = ev$dst_ip;
         local dst_port: port = ev$dst_port;
         local ev_key: IRC_EventKey = IRC_EventKey($src_ip = src_ip, $dst_ip = dst_ip, $dst_port = dst_port);
+        
         if (ev_key in key_set) {
             local vv: event_vec = key_set[ev_key];
             vv += ev;
@@ -376,7 +368,6 @@ compute_session_periodicity = function(ts_vec: vector of time): double
 # fast fourier transform
 fft = function(x: vector of Complex): vector of Complex 
 {
-    # print "fft..";
     local N: count = |x|;
     if (N <= 1) return x;
     local x_odd: vector of Complex = slice_c(x, 0, 2);
@@ -434,10 +425,8 @@ fft_preprocess_seq = function(x: vector of Complex): vector of Complex
     return x_new;
 };
 
-# ## COMPLEX 
 add_cc = function(a: Complex, b: Complex): Complex
 {
-    # print "add_cc";
     local r: double = a$real + b$real;
     local i: double = a$imag + b$imag;
     local c: Complex = Complex($real=r, $imag=i);
@@ -446,7 +435,6 @@ add_cc = function(a: Complex, b: Complex): Complex
 
 sub_cc = function(a: Complex, b:Complex): Complex
 {
-    # print "sub_cc";
     local r: double = a$real - b$real;
     local i: double = a$imag - b$imag;
     local c: Complex = Complex($real=r, $imag=i);
@@ -455,7 +443,6 @@ sub_cc = function(a: Complex, b:Complex): Complex
 
 mult_cc = function(a:Complex, b:Complex): Complex
 {
-    # print "mult_cc";
     local r: double = a$real * b$real - a$imag * b$imag;
     local i: double = a$imag * b$real + a$real * b$imag;
     local c: Complex = Complex($real=r, $imag=i);
@@ -464,7 +451,6 @@ mult_cc = function(a:Complex, b:Complex): Complex
 
 mult_cd = function(a:Complex, b:double): Complex
 {
-    # print "mult_cd";
     local r: double = a$real * b;
     local i: double = a$imag *b;
     local c: Complex = Complex($real=r, $imag=i);
@@ -473,21 +459,18 @@ mult_cd = function(a:Complex, b:double): Complex
 
 cosh = function(x: double): double
 {
-    # print "cosh";
     local r: double = (exp(x) + exp(-x))/2;
     return r;
 };
 
 sinh = function(x: double): double
 {
-    # print "sinh";
     local r: double = (exp(x) - exp(-x))/2;
     return r;
 };
 
 sin = function(x: double): double
 {
-    # print "sin";
     local a: double = x;
     local s: double = a;
     local i:count = 1;
@@ -503,14 +486,12 @@ sin = function(x: double): double
 
 cos = function(x: double): double
 {
-    # print "cos";
     local offset: double = 3.14159265/2.0;
     return sin(x+offset);
 };
 
 exp_c = function(c: Complex) : Complex
 {
-    # print "exp_C";
     local r: double = cosh(c$real) + sinh(c$real);
     local imcos: double = cos(c$imag);
     local imsin: double = sin(c$imag);
@@ -519,11 +500,8 @@ exp_c = function(c: Complex) : Complex
     return cc2;
 };
 
-# # assumptions: step > 0, |x| >= start >= 0,  end = |x|
-# # TODO: test the correctness
 slice_c = function(x: vector of Complex, start: int, step:int): vector of Complex
 {
-    # print "slice_c";
     local slice_x: vector of Complex = vector();
     for (i in x) {
         if (i >= start && (i-start) % step == 0) {
@@ -532,9 +510,8 @@ slice_c = function(x: vector of Complex, start: int, step:int): vector of Comple
     }
     return slice_x;
 };
-# ## UTILS
+
 pow = function(x:double, p:int) : double {
-    # print "pow";
     local x_p: double = x;
     local i: count = 0;
     while (i != p-1)
@@ -580,7 +557,6 @@ norm_vec_f = function(x: vector of double_vec): double {
     local x0_len: int = |x[0]|;
     local v: vector of double = vector();
     while (i < x0_len) {
-        # print i, "/", x0_len;
         v = vector();
         j = 0;
         while (j < x_len) {
@@ -604,7 +580,6 @@ mean_vec_f = function(x: vector of double_vec): vector of double {
     local x_len: int = |x|;
     local x0_len: int = |x[0]|;
     while (i < x0_len) {
-        # print i, "/", x0_len;
         v = vector();
         j = 0;
         while (j < x_len) {
@@ -619,7 +594,6 @@ mean_vec_f = function(x: vector of double_vec): vector of double {
 };
 
 sum_f = function(x:vector of double): double {
-    # print "add_cc";
     local sum_r: double = 0;
     for (i in x)
     {
@@ -629,12 +603,10 @@ sum_f = function(x:vector of double): double {
 };
 
 mean_f = function(x:vector of double): double {
-    # print "mean_f...";
     return sum_f(x) / |x|;
 };
 
 ln_f = function(x:vector of double): vector of double {
-    # print "ln_f";
     local ln_vec: vector of double;
     for (i in x) {
         ln_vec += ln(x[i]);
