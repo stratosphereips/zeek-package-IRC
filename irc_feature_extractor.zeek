@@ -1,17 +1,18 @@
-@load base/protocols/irc/
+@load base/bif/plugins/Zeek_IRC.events.bif.zeek
 
 module IRC_Feature_Extractor;
 
 type IRC_Event: record {
-    ts: time &log;
     src: string &log;
     src_ip: addr &log;
     src_port: port &log;
     dst: string &log;
     dst_ip: addr &log;
     dst_port: port &log;
-    msg: string &optional &log; 
-    msg_size: int &optional &log; 
+    msg: string &log; 
+    req_size: int &log;
+    start_time: time &log;
+    duration: interval &log;
 };
 
 type IRC_Session: record {
@@ -30,7 +31,6 @@ type IRC_Session: record {
     spec_chars_username_mean: double &log;
     spec_chars_msg_mean: double &log;
     msg_word_entropy: double &log;
-    # malicious: bool;
     msgs: vector of IRC_Event;
 };
 
@@ -70,11 +70,11 @@ event zeek_init()
     Log::create_stream(IRC_Feature_Extractor::LOG, [$columns=IRC_Session, $path="irc_features"]);
 }
 
-event IRC::irc_log(rec: IRC::Info) {
-    if (rec$command != "USER") return;
-    local ev: IRC_Event = IRC_Event($ts=rec$ts, $src=rec$nick, $src_ip=rec$id$orig_h, $src_port=rec$id$orig_p, $dst="", $dst_ip=rec$id$resp_h, $dst_port=rec$id$resp_p, $msg=rec$addl);
+event irc_privmsg_message(c: connection, is_orig: bool, source: string, target: string, message: string) {
+    local ev: IRC_Event = IRC_Event($src=source, $src_ip=c$id$orig_h, $src_port=c$id$orig_p, $dst=target, $dst_ip=c$id$resp_h, $dst_port=c$id$resp_p, $msg=message, $start_time=c$start_time, $duration=c$duration, $req_size=c$orig$size);
     irc_logs += ev;
 }
+
 
 global organize_events: function(): table[IRC_EventKey] of event_vec;
 global extract_sessions: function(): vector of IRC_Session;
@@ -136,15 +136,15 @@ extract_sessions = function(): vector of IRC_Session
     }
     local events: table[IRC_EventKey] of event_vec = organize_events();
     local session_vec: vector of IRC_Session;
-    local i_count :count  = 0;
+    local i_count: count  = 0;
     local size_total: int;
     for (i in events) {
         local ev: IRC_Event = events[i][0];
         local src: string = ev$src;
         local src_ip: addr = ev$src_ip;
-        local start_time: time = ev$ts;
+        local start_time: time = ev$start_time;
         local last_msg_idx: count = |events[i]| - 1;
-        local end_time: time = events[i][last_msg_idx]$ts;
+        local end_time = events[i][last_msg_idx]$start_time + events[i][last_msg_idx]$duration;
         local dst: string = ev$dst;
         local dst_ip: addr = ev$dst_ip;
         local dst_port: port = ev$dst_port;
@@ -182,10 +182,10 @@ extract_sessions = function(): vector of IRC_Session
         for (j in events[i])
         {
             local ev2: IRC_Event = events[i][j];
-            msg_ts_vec += ev2$ts;
+            msg_ts_vec += ev2$start_time;
             local msg: string = ev2$msg;
             local split_msg: string_vec = split_string(msg,/ /);
-            size_total += |ev2$msg|;
+            size_total += ev2$req_size;
             
             # compute word occurency
             for (k in split_msg) {
@@ -202,7 +202,7 @@ extract_sessions = function(): vector of IRC_Session
             local msg_rgx: PatternMatchResult;
             rgx_str_tmp = msg;
             while (T) {
-                msg_rgx = match_pattern(rgx_str_tmp, /[^A-Za-z ]/);
+                msg_rgx = match_pattern(rgx_str_tmp, /([^A-Za-z])*/);
                 if (!msg_rgx$matched) {
                     break;
                 }
