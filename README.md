@@ -13,7 +13,23 @@ To extract the IRC features on selected pcap file that contains IRC, the only th
 ```bash
 $ zeek -r file.pcap irc_feature_extractor
 ```
-output will be redirected `irc_features.log` file in zeek log format.
+output will be redirected `irc_features.log` file in zeek log format. 
+
+### Example output log
+```
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	irc_features
+#open	2020-01-27-21-54-41
+#fields	src	src_ip	src_ports_count	dst	dst_ip	dst_port	start_time	end_time	duration	msg_count	size_total	periodicity	spec_chars_username_mean	spec_chars_msg_mean	msg_word_entropy
+#types	string	addr	count	string	addr	port	time	time	double	count	int	double	double	double	double
+T!T@null	192.168.100.103	4	#a925d765	111.230.241.23	2407	1532322898.819018	1534860900.996931	2538002.177913	23	48705	0.050294	0.25	0.908075	2.001506
+T!T@null	192.168.100.103	33	#a925d765	185.61.149.22	2407	1530166710.153128	1535620500.535362	5453790.382234	231	562890	1.0	0.25	0.908256	2.276218
+#close	2020-01-27-21-54-41
+
+```
 
 ### Parsing log output in Python
 
