@@ -1,21 +1,21 @@
 # IRC-Zeek-package
-Zeek Package that extracts features of IRC communication that is automatically recognized from pcap file. 
+IRC Feature Extractor Zeek Package extends the functionality of Zeek network analysis framework. This package automatically recognizes IRC communication in a packet capture (pcap) file and automatically extract features from it.
+The goal for the feature extraction is to describe an individual IRC communications that occur in the pcap file as accurately as possible.
 
 ## Installation
-To install the package do the following in the package directory:
+To install the package, run the following commands in the directory where you want to install the package:
 ```bash
 $ git clone git@github.com:stratosphereips/IRC-Zeek-package.git
 $ cd IRC-Zeek-package
 $ zkg install .
 ```
 ## Run
-To extract the IRC features on selected pcap file that contains IRC, the only thing that you need to do is to run following command in terminal:
+To extract the IRC features on the selected pcap file that contains IRC, run the following command in a terminal:
 ```bash
 $ zeek -r file.pcap irc_feature_extractor
 ```
-output will be redirected `irc_features.log` file in zeek log format. 
+The output will be stored in  `irc_features.log` file in zeek log format. The log will look like this: 
 
-### Example output log
 ```
 #separator \x09
 #set_separator	,
@@ -31,7 +31,12 @@ T!T@null	192.168.100.103	33	#a925d765	185.61.149.22	2407	1530166710.153128	15356
 
 ```
 
-### Parsing log output in Python
+### Parsing log in Python
+
+Instead of parsing the package manually, you can use the ZAT library  in Python to parse it directly into a Pandas data frame or as a list of dictionaries.
+
+There is an example of how to parse the log as a list of dictionaries:
+
 
 ```python
 import zat
@@ -51,25 +56,29 @@ for log in reader.readrows():
 ```
 
 ## Description
-To be able to use IRC data, we separated the IRC communication into the connections between source IP, destination IP and destination port (hereinafter IRC connection)(see Figure below). The source port is neglected because we wanted to to merge communication that was splitted to more TCP connections. When the TCP connection is made, the source port is randomly generated from the unregistered port range and thus we needed to neglect the source port to match the IRC connection with the same source IP, destination IP and destination port. 
-IRC connection consists of informations that are needed.
+There were some steps to follow to extract the features. First, we separated the whole pcap into communications of individual users. To do that, we separated communication into the connections between the source IP, destination IP, and destination port (hereinafter IRC connection). The source port is randomly chosen from the unregistered port range, and that is why the source port is not the same when a new TCP connection is established between the same IP addresses. That is the reason why we needed to neglect the source port to match the IRC connection with the same source IP, destination IP, and destination port.
 
-![IRC Connection Scheme](figs/irc-connection.png)
+![alt](figs/irc-connection.png)
+
+Example of IRC connection - IRC connection that is defined by source IP address 192.168.0.1, destination IP address 192.168.0.2, and destination port 440. Source port is neglected, and therefore one IRC connection can have multiple source ports. The IP addresses and ports are chosen randomly for demonstration purposes.
 
 ## Extracted Features
 The feature selection is made manually to provide a good means of characterizing malicious communication. Features were computed for each IRC connection. Here is a final list of features that we used in our models.
 ### Total Packet Size
-Total data packets' size in bytes.
+Size of all packets in bytes that were sent in IRC connection. It reflects how many messages were sent and how long they were.
 ### Session Duration
-Duration of IRC connection in milliseconds.
+Duration of IRC connection in milliseconds - i.e., the difference between the time of the last message and the first message in IRC connection.
 ### Number of Messages
-Total number of messages in IRC connection.
+A total number of messages in IRC connection.
 ### Number of Source Ports
-Since the source port is neglected in unifying communication into sessions, the source address can use different port per TCP connection when the port is randlomly chosen. We suppose that artificial user could have higher number of source ports than the real user since the number of connections of the artificial user could be higher than the number of connections of the real user.
+As we have mentioned before, the source port is neglected in unifying communication into IRC connections because the it is randomly chosen when a TCP connection is established. We suppose that artificial users could have had a higher number of source ports than the real users since the number of connections of the artificial users was higher than the number of connections of the real users.
 ### Message Periodicity
-To compute message periodicity, we firstly compute time differences between every message. On this computed sequence of numbers, we apply a fast Fourier transform (FFT). Fast Fourier transform is an effective algorithm for computing discrete Fourier transform, which we are using to express time sequence as a sum of periodic components and for recovering signal from those components. The output of FFT is a sequence of numbers with the same length as the input. The higher the number on a given position of the output is, the bigger the amplitude on the given position is, and thus it has a more significant influence on the periodicity of the data. The position of the largest element in the FFT's output represents the length of the period which occurrence is the most probable from all other periods.
+We suppose that artificial users (e.g., bots that are controlled by botnet master) use IRC for sending commands periodically, so we wanted to obtain that value. To do that, we created a method that would return a number between 0 and 1 - i.e. one if the message sequence is perfectly periodical, zero if the message sequence is not periodical at all.
 
-To compute the quality of the period, we split the data by the length of a period. Then we compute the normalised mean squared error (NMSE) that returns us the resulting number in the interval between 0 and 1 where 1 represents the perfectly periodic messages, and 0 represents not periodic messages at all.
+To compute message periodicity, we firstly compute time differences between every message. On this computed sequence of numbers, we apply a fast Fourier transform (FFT). The output of FFT is a sequence of numbers. The higher the number on the given position of the output, the bigger the amplitude on the given position.Thus it has a more significant influence on the periodicity of the data.
+The position of the largest element in the FFT's output represents the length of the period, which is the most significant from all other periods. 
+
+To compute the quality of the most significant period, we split the data by length of that period.. Then we compute the normalised mean squared error (NMSE) that returns us the resulting number in the interval between 0 and 1 where 1 represents the perfectly periodic messages, and 0 represents not periodic messages at all.
 
 ![](figs/formula_per.gif)
 
@@ -78,7 +87,7 @@ To take into account whether the user is sending the same message multiple times
 
 ![](figs/formula_entropy.gif)
 
-where n represents number of words and p_i represents the probability that word $i$ is used among all other words.
+where n represents number of words and pi represents the probability that word i is used among all other words.
 ### Username Special Characters Mean
 Average usage of non-alphabetic characters in username.
 ### Message Special Characters Mean
