@@ -1,7 +1,3 @@
 [package]
-
 description = Zeek Package that extracts features of IRC communication 
-
-tags = zeek plugin, zeekctl plugin, irc, features extraction
-
-script_dir = scripts
+tags = zeek plugin, irc, features extraction
