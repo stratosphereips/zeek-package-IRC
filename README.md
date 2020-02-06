@@ -3,16 +3,14 @@ IRC Feature Extractor Zeek Package extends the functionality of Zeek network ana
 The goal for the feature extraction is to describe an individual IRC communications that occur in the pcap file as accurately as possible.
 
 ## Installation
-To install the package, run the following commands in the directory where you want to install the package:
+To install the package using [Zeek Package Manager](https://packages.zeek.org), run the following command:
 ```bash
-$ git clone git@github.com:stratosphereips/IRC-Zeek-package.git
-$ cd IRC-Zeek-package
-$ zkg install .
+$ zkg install IRC-Zeek-package
 ```
 ## Run
 To extract the IRC features on the selected pcap file that contains IRC, run the following command in a terminal:
 ```bash
-$ zeek -r file.pcap irc_feature_extractor
+$ zeek IRC-Zeek-package -r file.pcap 
 ```
 The output will be stored in  `irc_features.log` file in zeek log format. The log will look like this: 
 
@@ -33,7 +31,7 @@ T!T@null	192.168.100.103	33	#a925d765	185.61.149.22	2407	1530166710.153128	15356
 
 ### Parsing log in Python
 
-Instead of parsing the package manually, you can use the ZAT library  in Python to parse it directly into a Pandas data frame or as a list of dictionaries.
+Instead of parsing the package manually, you can use the [ZAT](https://github.com/SuperCowPowers/zat) library  in Python to parse it directly into a Pandas data frame or as a list of dictionaries.
 
 There is an example of how to parse the log as a list of dictionaries:
 
@@ -56,7 +54,8 @@ for log in reader.readrows():
 ```
 
 ## Description
-There were some steps to follow to extract the features. First, we separated the whole pcap into communications of individual users. To do that, we separated communication into the connections between the source IP, destination IP, and destination port (hereinafter IRC connection). The source port is randomly chosen from the unregistered port range, and that is why the source port is not the same when a new TCP connection is established between the same IP addresses. That is the reason why we needed to neglect the source port to match the IRC connection with the same source IP, destination IP, and destination port.
+Once the data was obtained from network traffic capture, there was a process to extract the features. We separated the whole pcap into communications for each individual user. To do that, we separated communication into the connections between the source IP, destination IP, and destination port (hereinafter IRC connection). The source port is randomly chosen from the unregistered port range, and that is why the source port is not the same when a new TCP connection is established between the same IP addresses. For this reason, we neglected the source port to match the IRC connection with the same source IP, destination IP, and destination port. This is shown in figure below, where are two connections from the source IP address (192.168.0.1), to the same destination IP address (192.168.0.2) using different source port.
+
 
 ![alt](figs/irc-connection.png)
 
@@ -83,12 +82,13 @@ To compute the quality of the most significant period, we split the data by leng
 ![](figs/formula_per.gif)
 
 ### Message Word Entropy
-To take into account whether the user is sending the same message multiple times in a row, or whether the message contains limited number of words, we compute word entropy across all messages in IRC connection. For computation of word entropy we are using formula below,
+To consider whether the user sends the same message multiple times in a row, or whether the message contains a limited number of words, we compute a word entropy across all of the messages in the IRC connection. By the term word entropy we mean a measure of  words uncertainty in the message. For the computation of the word entropy, we use the formula below:
 
 ![](figs/formula_entropy.gif)
 
-where n represents number of words and pi represents the probability that word i is used among all other words.
+where n represents the number of words, and p_i represents the probability that the word i will be used among all other words.
 ### Username Special Characters Mean
-Average usage of non-alphabetic characters in username.
+We want to obtain whether the username of the user in the IRC communication is random generated or not. Therefore, in this feature, we compute the average usage of non-alphabetic characters in the username.  
+
 ### Message Special Characters Mean
-Average usage of non-alphabetic character across all messages in IRC connection.
+With this feature, we obtain the average usage of non-alphabetic characters across all messages in the IRC connection. We apply the same procedure of matching special characters for each message as in the previous case - we match non-alphabetic characters by regex, and then we divide the number of matched characters by the total number of message characters. Finally, we compute an average of all the obtained values for each message.
