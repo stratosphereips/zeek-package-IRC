@@ -1,1 +1,1 @@
-@load ./irc_feature_extractor
+@load ./irc_feature_extractor.zeek
