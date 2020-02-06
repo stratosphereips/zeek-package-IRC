@@ -80,6 +80,7 @@ The position of the largest element in the FFT's output represents the length of
 To compute the quality of the most significant period, we split the data by length of that period.. Then we compute the normalised mean squared error (NMSE) that returns us the resulting number in the interval between 0 and 1 where 1 represents the perfectly periodic messages, and 0 represents not periodic messages at all.
 
 ![](figs/periodicity_sketch.png)
+
 Illustration of how message periodicity is computed. The time differences between messages and FFT output numbers are chosen randomly for demonstration purposes.
 
 ### Message Word Entropy
