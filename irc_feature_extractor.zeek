@@ -360,7 +360,11 @@ compute_session_periodicity = function(ts_vec: vector of time): double
     local td_T_norm: double = norm_vec_f(td_T);
     local td_T_sub: vector of double_vec = sub_vec_f(td_T, td_T_avg);
     local td_T_sub_norm: double = norm_vec_f(td_T_sub);
-    local td_nmse: double = td_T_sub_norm / td_T_norm;
+    local td_nmse: double = 0;
+    if (td_T_norm != 0) {
+        td_nmse = td_T_sub_norm / td_T_norm;
+    }
+
     return 1 - td_nmse;
 };
 
