@@ -79,14 +79,16 @@ The position of the largest element in the FFT's output represents the length of
 
 To compute the quality of the most significant period, we split the data by length of that period.. Then we compute the normalised mean squared error (NMSE) that returns us the resulting number in the interval between 0 and 1 where 1 represents the perfectly periodic messages, and 0 represents not periodic messages at all.
 
-![](figs/formula_per.gif)
+![](figs/periodicity_sketch.png)
+
+Illustration of how message periodicity is computed. The time differences between messages and FFT output numbers are chosen randomly for demonstration purposes.
 
 ### Message Word Entropy
 To consider whether the user sends the same message multiple times in a row, or whether the message contains a limited number of words, we compute a word entropy across all of the messages in the IRC connection. By the term word entropy we mean a measure of  words uncertainty in the message. For the computation of the word entropy, we use the formula below:
 
 ![](figs/formula_entropy.gif)
 
-where n represents the number of words, and p_i represents the probability that the word i will be used among all other words.
+where n represents the number of words, and pi represents the probability that the word i will be used among all other words.
 ### Username Special Characters Mean
 We want to obtain whether the username of the user in the IRC communication is random generated or not. Therefore, in this feature, we compute the average usage of non-alphabetic characters in the username.  
 
