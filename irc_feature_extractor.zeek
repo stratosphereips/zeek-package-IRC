@@ -56,8 +56,6 @@ type double_vec: vector of double;
 
 global irc_logs: vector of IRC_Event = vector();
 
-global VERBOSE: bool = F;
-
 # uncomment to use json as output
 # redef LogAscii::use_json = T;
 
