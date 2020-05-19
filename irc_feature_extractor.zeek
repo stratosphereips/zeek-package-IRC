@@ -17,12 +17,12 @@ type IRC_Event: record {
 
 type IRC_Session: record {
     src: string &log;
-    src_ip: addr &log;
+    saddr: addr &log;
     src_ports_count: count &log;
     dst: string &log;
-    dst_ip: addr &log;
-    dst_port: port &log;
-    start_time: time &log;
+    daddr: addr &log;
+    dport: port &log;
+    ts: time &log;
     end_time: time &log;
     duration: double &log;
     msg_count: count &log;
@@ -55,9 +55,10 @@ type event_vec: vector of IRC_Event;
 type double_vec: vector of double;
 
 global irc_logs: vector of IRC_Event = vector();
+global VERBOSE = F;
 
 # uncomment to use json as output
-# redef LogAscii::use_json = T;
+redef LogAscii::use_json = T;
 
 event zeek_init()
 {
@@ -241,9 +242,9 @@ extract_sessions = function(): vector of IRC_Session
             print "periodicity: ", periodicity;
         }
 
-        local session: IRC_Session = IRC_Session($src = src, $src_ip = src_ip, $src_ports_count = |src_ports|,$dst = dst,$dst_ip = dst_ip,
-            $dst_port = dst_port, 
-            $start_time = start_time, 
+        local session: IRC_Session = IRC_Session($src = src, $saddr = src_ip, $src_ports_count = |src_ports|,$dst = dst,$daddr = dst_ip,
+            $dport = dst_port,
+            $ts = start_time, 
             $end_time = end_time, 
             $duration = duration, 
             $msg_count = msg_count, 
