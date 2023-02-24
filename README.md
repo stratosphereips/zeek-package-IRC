@@ -1,4 +1,5 @@
-# IRC-Zeek-package
+# zeek-package-IRC
+
 IRC Feature Extractor Zeek Package extends the functionality of Zeek network analysis framework. This package automatically recognizes IRC communication in a packet capture (pcap) file and automatically extract features from it.
 The goal for the feature extraction is to describe an individual IRC communications that occur in the pcap file as accurately as possible.
 
