@@ -6,7 +6,7 @@ The goal for the feature extraction is to describe an individual IRC communicati
 ## Installation
 To install the package using [Zeek Package Manager](https://packages.zeek.org), run the following command:
 ```bash
-$ zkg install IRC-Zeek-package
+$ zkg install zeek/stratosphereips/zeek-package-IRC
 ```
 ## Run
 To extract the IRC features on the selected pcap file that contains IRC, run the following command in a terminal:
